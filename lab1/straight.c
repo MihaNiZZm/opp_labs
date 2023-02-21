@@ -4,6 +4,7 @@
 #include <time.h>
 
 #define ull unsigned long long
+#define ZERO_PROCESS 0
 
 int* createVector(ull length) {
     srand(time(NULL));
@@ -45,8 +46,9 @@ int main(int argc, char** argv) {
     start = MPI_Wtime();
     findSum(vector1, vector2, &sum, length);
     end = MPI_Wtime();
-
-    printf("The sum is: %lld\nTime spent: %lf seconds.\n", sum, end - start);
+    if (currentProcess == ZERO_PROCESS) {
+        printf("The sum is: %lld\nTime spent: %lf seconds.\n", sum, end - start);
+    }
 
     free(vector1);
     free(vector2);
