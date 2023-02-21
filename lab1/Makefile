@@ -11,7 +11,9 @@ point_point:
 	mpicxx point_point.c -o point_to_point.out
 
 collective:
+	mpicxx collective.c -o collective.out
 
 distribute_files:
 	mv straight.out executable_files
 	mv point_to_point.out executable_files
+	mv collective.out executable_files

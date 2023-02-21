@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
         printf("Please, input the length of vectors via first Command Line argument.\n");
         return 1;
     }
-    ull length = atoll(argv[1]);
+    ull length = atoi(argv[1]);
     
     int* vector1 = createVector(length);
     int* vector2 = createVector(length);

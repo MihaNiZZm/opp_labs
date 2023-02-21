@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         printf("Please, input the length of vectors via first Command Line argument.\n");
         return 1;
     }
-    length = atoll(argv[1]);
+    length = atoi(argv[1]);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &currentProcess);
