@@ -8,7 +8,8 @@ straight:
 	mpicxx ./src/straight.c -o straight.out
 
 parallel:
-
+	mpicxx ./src/parallel.c-o parallel.out
 
 distribute_files:
 	mv straight.out executable_files
+	mv parallel.out executable_files

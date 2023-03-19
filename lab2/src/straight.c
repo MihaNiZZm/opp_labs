@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
         end = MPI_Wtime();
 
         printf("Time spent: %.2lf seconds.\n", end - start);
-        printVector(vectorXn1, SIZE_OF_VECTOR);
+        printVector(vectorXn, SIZE_OF_VECTOR);
         freeMemory(vectorXn, vectorXn1, vectorB, vectorAXn, vectorDiffAXnB, matrixA);
     }
 
