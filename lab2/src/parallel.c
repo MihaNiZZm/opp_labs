@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <mpi/mpi.h>
+#include "mpi.h"
 
 #define SIZE_OF_VECTOR 5432
 #define ZERO_PROCESS 0
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
     if (currentProcess == ZERO_PROCESS) {
         end = MPI_Wtime();
         printf("Time spent: %.2lf seconds.\n", end - start);
-        printVector(vectorX, SIZE_OF_VECTOR);
+        //printVector(vectorX, SIZE_OF_VECTOR);
     }
     
     freeMemory(vectorX, vectorX1, vectorB, vectorAX, vectorDiffAXB, matrixA, partOfMatrixA, partOfVectorX1, partOfVectorAX, partOfVectorDiffAXB, sizesOfPartsOfVector, sizesOfPartsOfMatrix, displacementsOfPartsOfVector, displacementsOfPartsOfMatrix);

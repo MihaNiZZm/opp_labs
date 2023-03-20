@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <mpi/mpi.h>
+#include "mpi.h"
 
 #define SIZE_OF_VECTOR 5432
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 
     if (currentProcess == 0) {
         double start, end;
-
+	
         double* vectorXn = (double*)malloc(sizeof(double) * SIZE_OF_VECTOR);
         double* vectorXn1 = (double*)malloc(sizeof(double) * SIZE_OF_VECTOR);
         double* vectorB = (double*)malloc(sizeof(double) * SIZE_OF_VECTOR);
@@ -114,12 +114,12 @@ int main(int argc, char** argv) {
 
         while(!(isSolved(matrixA, vectorXn, vectorB, vectorAXn, vectorDiffAXnB, squaredNormB, EPSILON, SIZE_OF_VECTOR))) {
             getNextX(vectorXn, vectorDiffAXnB, vectorXn1, TAU, SIZE_OF_VECTOR);
-        }
+	}
 
         end = MPI_Wtime();
 
         printf("Time spent: %.2lf seconds.\n", end - start);
-        printVector(vectorXn, SIZE_OF_VECTOR);
+        //printVector(vectorXn, SIZE_OF_VECTOR);
         freeMemory(vectorXn, vectorXn1, vectorB, vectorAXn, vectorDiffAXnB, matrixA);
     }
 
