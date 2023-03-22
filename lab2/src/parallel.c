@@ -178,6 +178,7 @@ int main(int argc, char** argv) {
     double end = 0.0;
 
     if (currentProcess == ZERO_PROCESS) {
+        
         setDataFirstVariant(matrixA, vectorB, vectorX, vectorX1, vectorAX, vectorDiffAXB);
         fillSizesOfParts(sizesOfPartsOfVector, sizesOfPartsOfMatrix, numberOfProcesses);
         fillDisplacementsOfParts(displacementsOfPartsOfVector, displacementsOfPartsOfMatrix, sizesOfPartsOfVector, sizesOfPartsOfMatrix, numberOfProcesses);
@@ -198,12 +199,12 @@ int main(int argc, char** argv) {
     setDataToZero(partOfVectorAX, sizesOfPartsOfVector[currentProcess]);
     setDataToZero(partOfVectorDiffAXB, sizesOfPartsOfVector[currentProcess]);
     setDataToZero(partOfVectorX1, sizesOfPartsOfVector[currentProcess]);
-
-    calculateSquaredNormOfVector(&squaredNormB, vectorB, sizesOfPartsOfVector, displacementsOfPartsOfVector, currentProcess);
  
     MPI_Scatterv(matrixA, sizesOfPartsOfMatrix, displacementsOfPartsOfMatrix, MPI_DOUBLE, partOfMatrixA, sizesOfPartsOfMatrix[currentProcess], MPI_DOUBLE, ZERO_PROCESS, MPI_COMM_WORLD); 
     MPI_Bcast(vectorB, SIZE_OF_VECTOR, MPI_DOUBLE, ZERO_PROCESS, MPI_COMM_WORLD);
     MPI_Bcast(vectorX, SIZE_OF_VECTOR, MPI_DOUBLE, ZERO_PROCESS, MPI_COMM_WORLD);
+
+    calculateSquaredNormOfVector(&squaredNormB, vectorB, sizesOfPartsOfVector, displacementsOfPartsOfVector, currentProcess);
 
     while(!(isSolved(partOfMatrixA, vectorX, vectorB, partOfVectorAX, partOfVectorDiffAXB, squaredNormB, EPSILON, sizesOfPartsOfVector, displacementsOfPartsOfVector, currentProcess))) {
         getNextX(vectorX, partOfVectorDiffAXB, partOfVectorX1, TAU, sizesOfPartsOfVector, displacementsOfPartsOfVector, currentProcess);
