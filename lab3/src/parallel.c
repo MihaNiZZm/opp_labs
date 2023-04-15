@@ -4,6 +4,7 @@
 #include <omp.h>
 
 #define SIZE_OF_VECTOR 5432
+#define CHUNK_SIZE 50
 
 double const TAU = 0.00001;
 double const EPSILON = 1.0e-5;
@@ -18,7 +19,6 @@ void freeMemory(double* v1, double* v2, double* v3, double* v4, double* v5, doub
 }
 
 void setDataFirstVariant(double* matrixA, double* vectorB, double* vectorXn, double* vectorXn1, double* vectorAXn, double* vectorDiffAXnB) {
-#pragma omp for
     for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
         for (int j = 0; j < SIZE_OF_VECTOR; ++j) {
             if (i == j) {
@@ -30,7 +30,6 @@ void setDataFirstVariant(double* matrixA, double* vectorB, double* vectorXn, dou
         }
     }
 
-#pragma omp for
     for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
         vectorB[i] = SIZE_OF_VECTOR + 1.0;
         vectorXn[i] = 0.0;
@@ -60,6 +59,7 @@ void getMatrixVectorMultiplication(const double* srcMatrix, const double* srcVec
     for (int i = 0; i < axisSize; ++i) {
         dstVector[i] = 0.0;
         for (int j = 0; j < axisSize; ++j) {
+#pragma omp atomic
             dstVector[i] += srcMatrix[i * axisSize + j] * srcVector[j];
         }
     }
@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
             // Getting norm of B paralleled.
 #pragma omp for reduction(+:result)
             for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
+#pragma omp atomic
                 result += vectorB[i] * vectorB[i];
             }
             squaredNormB = result;
@@ -117,6 +118,7 @@ int main(int argc, char** argv) {
 
 #pragma omp for reduction(+:result)
             for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
+#pragma omp atomic
                 result += vectorDiffAXnB[i] * vectorDiffAXnB[i];
             }
             squaredNormAXnB = result;
