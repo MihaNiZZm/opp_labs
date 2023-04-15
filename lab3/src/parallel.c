@@ -72,24 +72,6 @@ void getValues(const double* srcVector, double* dstVector, int size) {
     }
 }
 
-double getSquaredNorm(const double* data, int size) {
-    double result = 0.0;
-
-#pragma omp for reduction(+:result)
-    for (int i = 0; i < size; ++i) {
-        result += data[i] * data[i];
-    }
-    return result;
-}
-
-bool isSolved(const double* matrixA, const double* vectorX, const double* vectorB, double* vectorAXn, double* vectorDiffAXnB, double squaredNormB, double threshold, int axisSize) {
-    getMatrixVectorMultiplication(matrixA, vectorX, vectorAXn, axisSize);
-    getDiffOfVectors(vectorAXn, vectorB, vectorDiffAXnB, 1.0, axisSize);
-    double squaredNormAXnB = getSquaredNorm(vectorDiffAXnB, axisSize);
-    double resultNorm = squaredNormAXnB / squaredNormB;
-    return (resultNorm < threshold * threshold) ? true : false;
-}
-
 void getNextX(double* vectorX, double* vectorDiffAXnB, double* vectorXn1, double multiplier, int axisSize) {
     getDiffOfVectors(vectorX, vectorDiffAXnB, vectorXn1, multiplier, axisSize);
     getValues(vectorXn1, vectorX, axisSize);
@@ -109,20 +91,46 @@ int main(int argc, char** argv) {
 
     double squaredNormB;
     double tempSum;
+    double squaredNormAXnB = 0.0;
+
+    bool hasEnded = false;
+
+    double result = 0;
 
     setDataFirstVariant(matrixA, vectorB, vectorXn, vectorXn1, vectorAXn, vectorDiffAXnB);
 
     start = omp_get_wtime();
-    #pragma omp parallel private(tempSum);
+    #pragma omp parallel
     {
-        squaredNormB = getSquaredNorm(vectorB, SIZE_OF_VECTOR);
-        while(!(isSolved(matrixA, vectorXn, vectorB, vectorAXn, vectorDiffAXnB, squaredNormB, EPSILON, SIZE_OF_VECTOR))) {
+        while (!hasEnded) {
+            // Getting norm of B paralleled.
+#pragma omp for reduction(+:result)
+            for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
+                result += vectorB[i] * vectorB[i];
+            }
+            squaredNormB = result;
+            result = 0;
+
+            // Checking for ending paralleled.
+            getMatrixVectorMultiplication(matrixA, vectorXn, vectorAXn, SIZE_OF_VECTOR);
+            getDiffOfVectors(vectorAXn, vectorB, vectorDiffAXnB, 1.0, SIZE_OF_VECTOR);
+
+#pragma omp for reduction(+:result)
+            for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
+                result += vectorDiffAXnB[i] * vectorDiffAXnB[i];
+            }
+            squaredNormAXnB = result;
+
+            double resultNorm = squaredNormAXnB / squaredNormB;
+            hasEnded = (resultNorm < EPSILON * EPSILON) ? true : false;
+
             getNextX(vectorXn, vectorDiffAXnB, vectorXn1, TAU, SIZE_OF_VECTOR);
         }
     }
     end = omp_get_wtime();
 
     printf("Time spent: %.2lf seconds.\n", end - start);
+    // printVector(vectorXn, SIZE_OF_VECTOR);
     freeMemory(vectorXn, vectorXn1, vectorB, vectorAXn, vectorDiffAXnB, matrixA);
     return 0;
 }
