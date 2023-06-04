@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "mpi.h": "c",
+        "type_traits": "c"
+    }
+}

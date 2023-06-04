@@ -59,7 +59,6 @@ void getMatrixVectorMultiplication(const double* srcMatrix, const double* srcVec
     for (int i = 0; i < axisSize; ++i) {
         dstVector[i] = 0.0;
         for (int j = 0; j < axisSize; ++j) {
-#pragma omp atomic
             dstVector[i] += srcMatrix[i * axisSize + j] * srcVector[j];
         }
     }
@@ -102,23 +101,21 @@ int main(int argc, char** argv) {
     start = omp_get_wtime();
     #pragma omp parallel
     {
-        while (!hasEnded) {
-            // Getting norm of B paralleled.
+        // Getting norm of B paralleled.
 #pragma omp for reduction(+:result)
-            for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
-#pragma omp atomic
-                result += vectorB[i] * vectorB[i];
-            }
-            squaredNormB = result;
-            result = 0;
+        for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
+            result += vectorB[i] * vectorB[i];
+        }
+        squaredNormB = result;
+        result = 0;
 
+        while (!hasEnded) {
             // Checking for ending paralleled.
             getMatrixVectorMultiplication(matrixA, vectorXn, vectorAXn, SIZE_OF_VECTOR);
             getDiffOfVectors(vectorAXn, vectorB, vectorDiffAXnB, 1.0, SIZE_OF_VECTOR);
 
 #pragma omp for reduction(+:result)
             for (int i = 0; i < SIZE_OF_VECTOR; ++i) {
-#pragma omp atomic
                 result += vectorDiffAXnB[i] * vectorDiffAXnB[i];
             }
             squaredNormAXnB = result;
