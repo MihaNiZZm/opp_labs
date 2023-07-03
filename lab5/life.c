@@ -7,8 +7,8 @@
 #define FIRST_ROW_TAG 100
 #define LAST_ROW_TAG 200
 
-#define FIELD_ROWS 256
-#define FIELD_COLS 256
+#define FIELD_ROWS 64
+#define FIELD_COLS 64
 #define NUM_OF_ITERS 2048
 
 void fillBreakpointFlagVector(const char* field, int tempField, int offset, char** states, int currentHistorySize, char* breakpoints) {
@@ -87,31 +87,51 @@ int getNextProc(int curProc, int numOfProcs) {
     return 0;
 }
 
-void drawGlider(char* field, int columns, int curRow, int curCol) {
-    field[curRow * columns + curCol + 1] = 1;
-    field[(curRow + 2) * columns + curCol] = 1;
-    field[(curRow + 2) * columns + curCol + 1] = 1;
-    field[(curRow + 2) * columns + curCol + 2] = 1;
-    field[(curRow + 1) * columns + curCol + 2] = 1;
+void drawGlider(char* field) {
+    field[1 * FIELD_COLS + 1] = 1;
+    field[2 * FIELD_COLS + 2] = 1;
+    field[3 * FIELD_COLS] = 1;
+    field[3 * FIELD_COLS + 1] = 1;
+    field[3 * FIELD_COLS + 2] = 1;
 }
 
-double life(const int numOfRows, const int numOfCols, const int curProc)
-{
+void calcCountsAndDispls(int* counts, int* displs, int numberOfProcesses) {
+    int tempDispl = 0;
+
+    for (int i = 0; i < numberOfProcesses; ++i) {
+        counts[i] = FIELD_ROWS / numberOfProcesses;
+        if (i < FIELD_ROWS % numberOfProcesses) {
+            counts[i] += 1;
+        }
+        counts[i] *= FIELD_COLS;
+        displs[i] = tempDispl;
+        tempDispl += counts[i];
+    }
+}
+
+double life(const int numOfRows, const int numOfCols, const int curProc) {
     double start, elapsed;
     int numberOfProcesses;
     MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcesses);
+
+    int* counts = (int*) calloc(numberOfProcesses, sizeof(int));
+    int* displs = (int*) calloc(numberOfProcesses, sizeof(int));
+    calcCountsAndDispls(counts, displs, numberOfProcesses);
 
     int partSize = numOfRows / numberOfProcesses * numOfCols;
     if (curProc < numOfRows % numberOfProcesses) {
         partSize += numOfCols;
     }
 
-    char* buf = calloc(partSize + numOfCols * 2, sizeof(char));
-    char* tempBuf = calloc(partSize + numOfCols * 2, sizeof(char));
+    char* field;
+    char* buf = (char*) calloc(partSize + numOfCols * 2, sizeof(char));
+    char* tempBuf = (char*) calloc(partSize + numOfCols * 2, sizeof(char));
 
     if (curProc == ZERO_PROCESS) {
-        drawGlider(buf, numOfCols, 1, 0);
+        field = calloc(FIELD_ROWS * FIELD_COLS, sizeof(char));
+        drawGlider(field);
     }
+    MPI_Scatterv(field, counts, displs, MPI_CHAR, buf, counts[curProc], MPI_CHAR, ZERO_PROCESS, MPI_COMM_WORLD);
 
     char* states[NUM_OF_ITERS];
     int currentHistorySize = 0;
@@ -119,7 +139,8 @@ double life(const int numOfRows, const int numOfCols, const int curProc)
     const int prevProc = getPrevProc(curProc, numberOfProcesses);
     const int nextProc = getNextProc(curProc, numberOfProcesses);
 
-    char* breakpoints = calloc(NUM_OF_ITERS, sizeof(char));
+    char* breakpoints = (char*) calloc(NUM_OF_ITERS, sizeof(char));
+    char* breakpointMatrix = calloc(NUM_OF_ITERS * numberOfProcesses, sizeof(char));
 
     if (curProc == ZERO_PROCESS) {
         start = MPI_Wtime();
@@ -134,16 +155,16 @@ double life(const int numOfRows, const int numOfCols, const int curProc)
 
         // 1. Sending the first row to the previous process.
         MPI_Isend(buf + numOfCols, numOfCols, MPI_CHAR, prevProc, FIRST_ROW_TAG, MPI_COMM_WORLD, &sendToPrev);
-        
+
         // 2. Sending the last row to the next process.
         MPI_Isend(buf + partSize, numOfCols, MPI_CHAR, nextProc, LAST_ROW_TAG, MPI_COMM_WORLD, &sendToNext);
 
         // 3. Getting the last row from the previous process.
         MPI_Irecv(buf, numOfCols, MPI_CHAR, prevProc, LAST_ROW_TAG, MPI_COMM_WORLD, &getFromPrev);
-        
+
         // 4. Getting the first row from the next process.
         MPI_Irecv(buf + partSize + numOfCols, numOfCols, MPI_CHAR, nextProc, FIRST_ROW_TAG, MPI_COMM_WORLD, &getFromNext);
-        
+
         // 6. Reducing breakpoint-flag vector.
         MPI_Iallreduce(MPI_IN_PLACE, breakpoints, currentHistorySize, MPI_CHAR, MPI_BAND, MPI_COMM_WORLD, &vectorSharing);
 
@@ -170,11 +191,11 @@ double life(const int numOfRows, const int numOfCols, const int curProc)
 
         // Updating data for the next iteration.
         buf = tempBuf; // Setting new state (tempBuf) to the old one (buf).
-        tempBuf = malloc(partSize + numOfCols * 2); // Allocating new memory for tempBuf (there will be no memleaks because all buffers' pointers are located in the states array).
+        tempBuf = (char*) calloc(partSize + numOfCols * 2, sizeof(char)); // Allocating new memory for tempBuf (there will be no memleaks because all buffers' pointers are located in the states array).
 
         // 14. Waiting for vector to be shared among all of the processes.
         MPI_Wait(&vectorSharing, MPI_STATUS_IGNORE);
-        
+
         // 15. Checking breakpoint-flag vector and ending the game if needed.
         int areEqual = 0;
         for (int i = 0; i < currentHistorySize; ++i) {
@@ -197,15 +218,21 @@ double life(const int numOfRows, const int numOfCols, const int curProc)
     for (int i = 0; i < currentHistorySize; i++) {
         free(states[i]);
     }
+
+    if (curProc == ZERO_PROCESS) {
+        free(field);
+    }
     free(buf);
     free(tempBuf);
     free(breakpoints);
+    free(breakpointMatrix);
+    free(counts);
+    free(displs);
 
     return elapsed;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
 
     int curProc;
