@@ -88,11 +88,11 @@ int getNextProc(int curProc, int numOfProcs) {
 }
 
 void drawGlider(char* field) {
-    field[1 * FIELD_COLS + 1] = 1;
+    field[0 * FIELD_COLS + 1] = 1;
+    field[1 * FIELD_COLS + 2] = 1;
+    field[2 * FIELD_COLS] = 1;
+    field[2 * FIELD_COLS + 1] = 1;
     field[2 * FIELD_COLS + 2] = 1;
-    field[3 * FIELD_COLS] = 1;
-    field[3 * FIELD_COLS + 1] = 1;
-    field[3 * FIELD_COLS + 2] = 1;
 }
 
 void calcCountsAndDispls(int* counts, int* displs, int numberOfProcesses) {
@@ -131,7 +131,7 @@ double life(const int numOfRows, const int numOfCols, const int curProc) {
         field = calloc(FIELD_ROWS * FIELD_COLS, sizeof(char));
         drawGlider(field);
     }
-    MPI_Scatterv(field, counts, displs, MPI_CHAR, buf, counts[curProc], MPI_CHAR, ZERO_PROCESS, MPI_COMM_WORLD);
+    MPI_Scatterv(field, counts, displs, MPI_CHAR, buf + FIELD_COLS, counts[curProc], MPI_CHAR, ZERO_PROCESS, MPI_COMM_WORLD);
 
     char* states[NUM_OF_ITERS];
     int currentHistorySize = 0;
@@ -166,7 +166,7 @@ double life(const int numOfRows, const int numOfCols, const int curProc) {
         MPI_Irecv(buf + partSize + numOfCols, numOfCols, MPI_CHAR, nextProc, FIRST_ROW_TAG, MPI_COMM_WORLD, &getFromNext);
 
         // 6. Reducing breakpoint-flag vector.
-        MPI_Iallreduce(MPI_IN_PLACE, breakpoints, currentHistorySize, MPI_CHAR, MPI_BAND, MPI_COMM_WORLD, &vectorSharing);
+        MPI_Iallreduce(MPI_IN_PLACE, breakpoints, currentHistorySize, MPI_CHAR, MPI_PROD, MPI_COMM_WORLD, &vectorSharing);
 
         // 7. Updating middle rows (all except the first and the last ones).
         updateMiddleRows(buf, tempBuf, partSize / numOfCols, numOfCols);
