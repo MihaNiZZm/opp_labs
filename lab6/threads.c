@@ -1,5 +1,5 @@
 #include <math.h>
-#include <mpi/mpi.h>
+#include <mpi.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #define ASK_FOR_TASKS_TAG 128
 #define SEND_NUM_OF_TASKS_TAG 256
 #define SEND_TASKS_TAG 512
-#define IS_DONE -1
+#define IS_DONE 8
 
 int numOfProcs, curProcNum;
 double globalResult = 0;
@@ -98,8 +98,8 @@ void* work() {
 
         endIter = MPI_Wtime();
         timeIter = endIter - startIter;
-        MPI_Allreduce(&timeIter, &timeIterMax, 1, MPI_DOUBLE, MPI_MAX ,MPI_COMM_WORLD);
-        MPI_Allreduce (&timeIter, &timeIterMin,1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        MPI_Allreduce(&timeIter, &timeIterMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Allreduce (&timeIter, &timeIterMin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         disbalance = timeIterMax - timeIterMin;
         disbalancePercent = (disbalance / timeIterMax) * 100;
