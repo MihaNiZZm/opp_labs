@@ -46,12 +46,12 @@ void calculateTasks(const int* tasks) {
     tasksRemained = 0;
 }
 
-void* work() {
+void* work(void* ignored) {
     double startIter, endIter;
     double timeIter, timeIterMin, timeIterMax;
     double disbalance, disbalancePercent;
 
-    taskList = calloc(NUM_OF_TASKS, sizeof(int));
+    taskList = (int*) calloc(NUM_OF_TASKS, sizeof(int));
 
     for (int i = 0; i < NUM_OF_ITERATIONS; i++) {
 
