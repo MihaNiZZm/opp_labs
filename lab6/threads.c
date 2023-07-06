@@ -26,6 +26,7 @@ pthread_mutex_t lock;
 void initTasks(int* tasks, int iter) {
     for (int i = 0; i < NUM_OF_TASKS; i++){
         tasks[i] = abs(50 - i % 100) * abs(curProcNum - (iter % numOfProcs)) * L;
+        // tasks[i] = abs(50 - i % 100) * abs(curProcNum) * L;
     }
 }
 
@@ -46,7 +47,6 @@ void calculateTasks(const int* tasks) {
 }
 
 void* work() {
-
     double startIter, endIter;
     double timeIter, timeIterMin, timeIterMax;
     double disbalance, disbalancePercent;
@@ -98,8 +98,8 @@ void* work() {
 
         endIter = MPI_Wtime();
         timeIter = endIter - startIter;
-        MPI_Allreduce(&timeIter, &timeIterMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        MPI_Allreduce (&timeIter, &timeIterMin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        MPI_Allreduce(&timeIter, &timeIterMax, 1, MPI_DOUBLE, MPI_MAX ,MPI_COMM_WORLD);
+        MPI_Allreduce (&timeIter, &timeIterMin,1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         disbalance = timeIterMax - timeIterMin;
         disbalancePercent = (disbalance / timeIterMax) * 100;
@@ -120,7 +120,7 @@ void* work() {
     pthread_exit(NULL);
 }
 
-void* receive() {
+void receive() {
     int done;
     int tasksToSend;
     MPI_Barrier(MPI_COMM_WORLD);
@@ -140,7 +140,6 @@ void* receive() {
         }
         pthread_mutex_unlock(&lock);
     }
-    pthread_exit(NULL);
 }
 
 int main(int argc, char **argv) {
@@ -176,13 +175,6 @@ int main(int argc, char **argv) {
 
   start = MPI_Wtime();
 
-  pthread_t receiver;
-  if (pthread_create(&receiver, &attr, receive, NULL) != 0) {
-    printf("Can't create receive thread.\n");
-    MPI_Finalize();
-    return 1;
-  }
-
   pthread_t worker;
   if (pthread_create(&worker, &attr, work, NULL) != 0) {
     printf("Can't create work thread.\n");
@@ -190,7 +182,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (pthread_join(receiver, NULL) != 0 || pthread_join(worker, NULL) != 0) {
+  receive();
+
+  if (pthread_join(worker, NULL) != 0) {
     printf("Can't join threads.\n");
     MPI_Finalize();
     return 1;
